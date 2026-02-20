@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
 export async function POST(req: Request) {
-  const client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY!,
-  });
+  try {
+    const client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY!,
+    });
 
-  const body = await req.json();
+    const body = await req.json();
 
-  const CHARACTER_SETTING = `
+    const CHARACTER_SETTING = `
 【固定人物设定（不可更改）】
 
 陈楚生：
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
 - 禁止幼态化、禁止脸谱化
 `;
 
-  const prompt = `
+    const prompt = `
 你正在创作一篇中文同人文本。
 
 ${CHARACTER_SETTING}
@@ -58,22 +59,30 @@ ${body.styleText || "无"}
 - 字数约 600–900 字
 `;
 
-  const completion = await client.chat.completions.create({
-    model: "gpt-4.1",
-    messages: [
-      {
-        role: "system",
-        content: "你是一名成熟的中文同人作者，语言自然，避免AI腔。",
-      },
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
-    temperature: 0.85,
-  });
+    const completion = await client.chat.completions.create({
+      model: "gpt-4.1",
+      messages: [
+        {
+          role: "system",
+          content: "你是一名成熟的中文同人作者，语言自然，避免AI腔。",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.85,
+    });
 
-  return NextResponse.json({
-    text: completion.choices[0].message.content,
-  });
+    return NextResponse.json({
+      text: completion.choices[0].message.content,
+    });
+  } catch (err: any) {
+    console.error("❌ generate error:", err);
+
+    return NextResponse.json(
+      { error: "generate failed", detail: String(err) },
+      { status: 500 }
+    );
+  }
 }
