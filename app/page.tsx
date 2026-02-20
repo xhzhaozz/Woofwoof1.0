@@ -11,6 +11,7 @@ export default function Home() {
   const [styleRef, setStyleRef] = useState("");
   const [styleText, setStyleText] = useState("");
   const [result, setResult] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const toggle = (
     arr: string[],
@@ -25,22 +26,47 @@ export default function Home() {
   };
 
   const generate = async () => {
-    const res = await fetch("/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        relation,
-        background,
-        plot,
-        viewpoint,
-        specialForm,
-        styleRef,
-        styleText,
-      }),
-    });
+    setLoading(true);
+    setResult("");
 
-    const data = await res.json();
-    setResult(data.text);
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          relation,
+          background,
+          plot,
+          viewpoint,
+          specialForm,
+          styleRef,
+          styleText,
+        }),
+      });
+
+      // ❗ 非 200 直接读取 text，防止 JSON 炸掉
+      if (!res.ok) {
+        const errorText = await res.text();
+        alert("生成失败：\n" + errorText);
+        setLoading(false);
+        return;
+      }
+
+      const data = await res.json();
+
+      if (!data.text) {
+        alert("生成失败：未返回文本");
+        setLoading(false);
+        return;
+      }
+
+      setResult(data.text);
+    } catch (err) {
+      console.error(err);
+      alert("请求异常，请稍后重试");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -89,7 +115,10 @@ export default function Home() {
         "0713众人喝酒唱歌",
       ].map((v) => (
         <label key={v} style={{ marginRight: 12 }}>
-          <input type="checkbox" onChange={() => toggle(plot, v, setPlot)} />{" "}
+          <input
+            type="checkbox"
+            onChange={() => toggle(plot, v, setPlot)}
+          />{" "}
           {v}
         </label>
       ))}
@@ -157,12 +186,24 @@ export default function Home() {
         style={{ width: "100%", marginTop: 8 }}
       />
 
-      <button onClick={generate} style={{ marginTop: 16 }}>
-        Generate
+      <button
+        onClick={generate}
+        disabled={loading}
+        style={{ marginTop: 16 }}
+      >
+        {loading ? "生成中…" : "Generate"}
       </button>
 
       {result && (
-        <pre style={{ whiteSpace: "pre-wrap", marginTop: 24 }}>{result}</pre>
+        <pre
+          style={{
+            whiteSpace: "pre-wrap",
+            marginTop: 24,
+            lineHeight: 1.7,
+          }}
+        >
+          {result}
+        </pre>
       )}
     </main>
   );
